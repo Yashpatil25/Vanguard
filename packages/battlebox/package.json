@@ -1,0 +1,16 @@
+{
+  "name": "@vanguard/battlebox",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "battlebox": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@vanguard/risk-engine": "1.0.0*"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

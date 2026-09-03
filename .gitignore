@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Generated Prisma client
+generated/prisma/
+
+# Build output
+dist/
+build/
