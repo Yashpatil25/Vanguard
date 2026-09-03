@@ -1,6 +1,6 @@
 import { prisma } from "./lib/prisma.js";
 import { evaluateAndPersistPayment } from "./services/payment-evaluation.js";
-
+import { executePayment } from "./services/payment-execution.js";
 async function main() {
   const user = await prisma.user.findFirst();
 
@@ -216,6 +216,221 @@ async function main() {
     console.log(
       "✅ Client intent values cannot override database Intent Passport"
     );
+        /*
+     * ------------------------------------------------
+     * TEST 4 — TRANSACTION LIMIT IS PERSISTED
+     * ------------------------------------------------
+     */
+
+    const limitedIntent = await prisma.intentPassport.create({
+      data: {
+        agentId: agentA.id,
+        originalRequest: "Buy one pair of headphones",
+        purpose: "Buy headphones",
+        category: "electronics",
+        maxAmount: 5_000,
+        currency: "INR",
+        recurringAllowed: false,
+        maxTransactions: 1,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        status: "ACTIVE",
+      },
+    });
+
+    const firstPayment =
+      await evaluateAndPersistPayment(
+        {
+          agentId: agentA.id,
+          intentId: limitedIntent.id,
+          merchantId: "security-test",
+          merchantName: "Security Test Merchant",
+          amount: 1_000,
+          currency: "INR",
+        },
+        {
+          dailyLimit: agentA.dailyLimit,
+          perTransactionLimit: agentA.perTransactionLimit,
+          riskThreshold: agentA.riskThreshold,
+          amountSpentToday: 0,
+          previousMerchants: [],
+          recentTransactions: [],
+        },
+        {
+          maxAmount: 999_999,
+          currency: "INR",
+          purpose: "attacker override",
+          recurringAllowed: true,
+          maxTransactions: 99,
+          transactionsUsed: 0,
+          expiresAt: new Date(Date.now() + 3600000),
+        }
+      );
+
+    if (firstPayment.decision !== "ALLOW") {
+      throw new Error(
+        `First payment should be ALLOW, got ${firstPayment.decision}`
+      );
+    }
+
+    /*
+     * The first evaluation creates a PaymentIntent,
+     * but has not executed it yet.
+     *
+     * Therefore the passport should still have
+     * transactionsUsed = 0.
+     */
+
+    const secondPayment =
+      await evaluateAndPersistPayment(
+        {
+          agentId: agentA.id,
+          intentId: limitedIntent.id,
+          merchantId: "security-test",
+          merchantName: "Security Test Merchant",
+          amount: 1_000,
+          currency: "INR",
+        },
+        {
+          dailyLimit: agentA.dailyLimit,
+          perTransactionLimit: agentA.perTransactionLimit,
+          riskThreshold: agentA.riskThreshold,
+          amountSpentToday: 0,
+          previousMerchants: [],
+          recentTransactions: [],
+        },
+        {
+          maxAmount: 999_999,
+          currency: "INR",
+          purpose: "attacker override",
+          recurringAllowed: true,
+          maxTransactions: 99,
+          transactionsUsed: 0,
+          expiresAt: new Date(Date.now() + 3600000),
+        }
+      );
+
+    /*
+     * Both evaluations are not executed yet, so both
+     * are expected to remain ALLOW.
+     *
+     * This confirms that usage is based on actual
+     * persisted transactions, not evaluations.
+     */
+
+    if (secondPayment.decision !== "ALLOW") {
+      throw new Error(
+        `Unecuted payment incorrectly consumed transaction limit: ${secondPayment.decision}`
+      );
+    }
+
+    console.log(
+      "✅ Unecuted PaymentIntents do not consume transaction limit"
+    );
+        /*
+     * ------------------------------------------------
+     * TEST 5 — EXECUTED PAYMENT CONSUMES LIMIT
+     * ------------------------------------------------
+     */
+
+    const executionIntent =
+      await prisma.intentPassport.create({
+        data: {
+          agentId: agentA.id,
+          originalRequest: "Buy one pair of headphones",
+          purpose: "Buy headphones",
+          category: "electronics",
+          maxAmount: 5_000,
+          currency: "INR",
+          recurringAllowed: false,
+          maxTransactions: 1,
+          expiresAt: new Date(
+            Date.now() + 30 * 60 * 1000
+          ),
+          status: "ACTIVE",
+        },
+      });
+
+    const firstEvaluation =
+      await evaluateAndPersistPayment(
+        {
+          agentId: agentA.id,
+          intentId: executionIntent.id,
+          merchantId: "security-test",
+          merchantName: "Security Test Merchant",
+          amount: 1_000,
+          currency: "INR",
+        },
+        {
+          dailyLimit: agentA.dailyLimit,
+          perTransactionLimit:
+            agentA.perTransactionLimit,
+          riskThreshold: agentA.riskThreshold,
+          amountSpentToday: 0,
+          previousMerchants: [],
+          recentTransactions: [],
+        },
+        {
+          maxAmount: 999_999,
+          currency: "INR",
+          purpose: "attacker override",
+          recurringAllowed: true,
+          maxTransactions: 99,
+          transactionsUsed: 0,
+          expiresAt: new Date(
+            Date.now() + 3600000
+          ),
+        }
+      );
+
+    if (firstEvaluation.decision !== "ALLOW") {
+      throw new Error(
+        `First payment should be ALLOW, got ${firstEvaluation.decision}`
+      );
+    }
+
+    await executePayment(firstEvaluation.paymentIntentId);
+
+    const secondEvaluation =
+      await evaluateAndPersistPayment(
+        {
+          agentId: agentA.id,
+          intentId: executionIntent.id,
+          merchantId: "security-test",
+          merchantName: "Security Test Merchant",
+          amount: 1_000,
+          currency: "INR",
+        },
+        {
+          dailyLimit: agentA.dailyLimit,
+          perTransactionLimit:
+            agentA.perTransactionLimit,
+          riskThreshold: agentA.riskThreshold,
+          amountSpentToday: 0,
+          previousMerchants: [],
+          recentTransactions: [],
+        },
+        {
+          maxAmount: 999_999,
+          currency: "INR",
+          purpose: "attacker override",
+          recurringAllowed: true,
+          maxTransactions: 99,
+          transactionsUsed: 0,
+          expiresAt: new Date(
+            Date.now() + 3600000
+          ),
+        }
+      );
+
+    if (secondEvaluation.decision === "ALLOW") {
+      throw new Error(
+        "Second payment bypassed the Intent Passport transaction limit"
+      );
+    }
+
+    console.log(
+      "✅ Executed payment consumes Intent Passport transaction limit"
+    );
 
     console.log("");
     console.log("====================================");
@@ -236,48 +451,59 @@ async function main() {
         id: true,
       },
     });
+      // Cleanup test data
 
-    for (const paymentIntent of testPaymentIntents) {
-      await prisma.riskSignal.deleteMany({
-        where: {
-          paymentIntentId: paymentIntent.id,
-        },
-      });
-
-      await prisma.riskAssessment.deleteMany({
-        where: {
-          paymentIntentId: paymentIntent.id,
-        },
-      });
-
-      await prisma.paymentIntent.delete({
-        where: {
-          id: paymentIntent.id,
-        },
-      });
-    }
-
-    await prisma.intentPassport.delete({
+    await prisma.riskSignal.deleteMany({
       where: {
-        id: intentA.id,
+        paymentIntent: {
+          agentId: {
+            in: [agentA.id, agentB.id],
+          },
+        },
       },
     });
 
-    await prisma.intentPassport.delete({
+    await prisma.riskAssessment.deleteMany({
       where: {
-        id: intentB.id,
+        paymentIntent: {
+          agentId: {
+            in: [agentA.id, agentB.id],
+          },
+        },
       },
     });
 
-    await prisma.agent.delete({
+    await prisma.transaction.deleteMany({
       where: {
-        id: agentA.id,
+        paymentIntent: {
+          agentId: {
+            in: [agentA.id, agentB.id],
+          },
+        },
       },
     });
 
-    await prisma.agent.delete({
+    await prisma.paymentIntent.deleteMany({
       where: {
-        id: agentB.id,
+        agentId: {
+          in: [agentA.id, agentB.id],
+        },
+      },
+    });
+
+    await prisma.intentPassport.deleteMany({
+      where: {
+        agentId: {
+          in: [agentA.id, agentB.id],
+        },
+      },
+    });
+
+    await prisma.agent.deleteMany({
+      where: {
+        id: {
+          in: [agentA.id, agentB.id],
+        },
       },
     });
   }

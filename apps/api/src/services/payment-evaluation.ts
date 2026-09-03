@@ -36,24 +36,29 @@ export async function evaluateAndPersistPayment(
     );
   }
 
-  const authoritativeIntent: IntentContext = {
-    ...(storedIntent.maxAmount !== null && {
-      maxAmount: storedIntent.maxAmount,
-    }),
-    currency: storedIntent.currency,
-    purpose: storedIntent.purpose,
-    ...(storedIntent.category !== null && {
-      category: storedIntent.category,
-    }),
-    recurringAllowed: storedIntent.recurringAllowed,
-    maxTransactions: storedIntent.maxTransactions,
+const transactionsUsed = await prisma.paymentIntent.count({
+  where: {
+    intentId: storedIntent.id,
+    transaction: {
+      isNot: null,
+    },
+  },
+});
 
-    // Transaction usage will be derived from persisted
-    // PaymentIntents in a later step.
-    transactionsUsed: 0,
-
-    expiresAt: storedIntent.expiresAt,
-  };
+const authoritativeIntent: IntentContext = {
+  ...(storedIntent.maxAmount !== null && {
+    maxAmount: storedIntent.maxAmount,
+  }),
+  currency: storedIntent.currency,
+  purpose: storedIntent.purpose,
+  ...(storedIntent.category !== null && {
+    category: storedIntent.category,
+  }),
+  recurringAllowed: storedIntent.recurringAllowed,
+  maxTransactions: storedIntent.maxTransactions,
+  transactionsUsed,
+  expiresAt: storedIntent.expiresAt,
+};
 
   const result = evaluatePayment(
     payment,
