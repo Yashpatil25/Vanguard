@@ -31,20 +31,35 @@ export function evaluateVelocity(
     });
   }
 
-  // Same-merchant payment loop
+  // Payment loop:
+  // repeated attempts to the same merchant with a similar
+  // amount within a short period.
   const sameMerchantTransactions =
     recentTransactions.filter(
       (transaction) =>
         transaction.merchantId === request.merchantId
     );
 
-  if (sameMerchantTransactions.length >= 2) {
+  const similarAmountTransactions =
+    sameMerchantTransactions.filter((transaction) => {
+      if (request.amount <= 0) {
+        return false;
+      }
+
+      const difference =
+        Math.abs(transaction.amount - request.amount) /
+        request.amount;
+
+      return difference <= 0.05;
+    });
+
+  if (similarAmountTransactions.length >= 2) {
     signals.push({
       type: "PAYMENT_LOOP",
-      score: 30,
-      severity: "HIGH",
+      score: 40,
+      severity: "CRITICAL",
       description:
-        "Multiple payments to the same merchant were attempted within a very short period.",
+        "The agent is repeatedly attempting a similar payment to the same merchant within a short period, indicating a possible payment loop.",
     });
   }
 

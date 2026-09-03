@@ -319,12 +319,12 @@ async function main() {
 
     if (secondPayment.decision !== "ALLOW") {
       throw new Error(
-        `Unecuted payment incorrectly consumed transaction limit: ${secondPayment.decision}`
+        `Unexecuted payment incorrectly consumed transaction limit: ${secondPayment.decision}`
       );
     }
 
     console.log(
-      "✅ Unecuted PaymentIntents do not consume transaction limit"
+      "✅ Unexecuted PaymentIntents do not consume transaction limit"
     );
         /*
      * ------------------------------------------------
@@ -441,17 +441,6 @@ async function main() {
      * Clean up everything created by this test.
      */
 
-    const testPaymentIntents = await prisma.paymentIntent.findMany({
-      where: {
-        agentId: {
-          in: [agentA.id, agentB.id],
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-      // Cleanup test data
 
     await prisma.riskSignal.deleteMany({
       where: {
