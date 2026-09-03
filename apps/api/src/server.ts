@@ -6,6 +6,7 @@ import cors from "cors";
 import paymentsRouter from "./routes/payments.js";
 import auditRouter from "./routes/audit.js";
 import razorpayWebhookRouter from "./routes/razorpay-webhook.js";
+import demoRouter from "./routes/demo.js"; 
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/v1/payments", paymentsRouter);
 app.use("/api/v1/audit", auditRouter);
+app.use("/api/v1/demo", demoRouter);
 
 const PORT = Number(process.env.API_PORT) || 4000;
 

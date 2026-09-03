@@ -6,7 +6,27 @@ declare global {
 }
 
 const API = "http://localhost:4000";
+let demoAgentId = "";
+let demoIntentId = "";
 
+async function loadDemoBootstrap() {
+  const response = await fetch(
+    `${API}/api/v1/demo/bootstrap`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load demo configuration");
+  }
+
+  const json = await response.json();
+
+  if (!json.success || !json.data?.agent?.id || !json.data?.intent?.id) {
+    throw new Error("Invalid demo configuration");
+  }
+
+  demoAgentId = json.data.agent.id;
+  demoIntentId = json.data.intent.id;
+}
 type Payment = {
   id: string;
   merchantName: string;
@@ -1081,8 +1101,8 @@ function getTransactionPayment() {
     )?.value?.trim() || "Purchase headphones";
 
   return {
-    agentId: "cmtfnuffh000138wbahac9ckf",
-    intentId: "cmtfnuffr000338wbkolo25j9",
+    agentId: demoAgentId,
+    intentId: demoIntentId,
 
     merchantId: "merchant_battlebox",
     merchantName: merchant,
@@ -1467,6 +1487,7 @@ function buildAttack(
 
         payment: {
           ...payment,
+          purpose: "Buy headphones",
         },
 
         agent: {
@@ -2683,5 +2704,24 @@ function bindPageActions() {
 }
 
 renderShell(`<div class="loading">Loading Vanguard...</div>`);
-loadDashboard();
+
+loadDemoBootstrap()
+  .then(() => loadDashboard())
+  .catch((error) => {
+    console.error("Demo bootstrap failed:", error);
+
+    renderContent(`
+      <div class="engine-error">
+        <span>VANGUARD STARTUP ERROR</span>
+        <strong>Demo configuration could not be loaded.</strong>
+        <code>
+          ${
+            error instanceof Error
+              ? error.message
+              : "Unknown error"
+          }
+        </code>
+      </div>
+    `);
+  });
 
