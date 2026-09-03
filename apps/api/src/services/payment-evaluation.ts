@@ -16,10 +16,50 @@ export async function evaluateAndPersistPayment(
   agent: AgentContext,
   intent: IntentContext
 ): Promise<DecisionResult & { paymentIntentId: string }> {
-  const result = evaluatePayment(payment, agent, {
-    ...intent,
-    expiresAt: new Date(intent.expiresAt),
+  const storedIntent = await prisma.intentPassport.findUnique({
+    where: {
+      id: payment.intentId,
+    },
   });
+
+  if (!storedIntent) {
+    throw new Error("Intent Passport not found");
+  }
+
+  if (storedIntent.agentId !== payment.agentId) {
+    throw new Error("Intent Passport does not belong to this agent");
+  }
+
+  if (storedIntent.status !== "ACTIVE") {
+    throw new Error(
+      `Intent Passport is ${storedIntent.status}`
+    );
+  }
+
+  const authoritativeIntent: IntentContext = {
+    ...(storedIntent.maxAmount !== null && {
+      maxAmount: storedIntent.maxAmount,
+    }),
+    currency: storedIntent.currency,
+    purpose: storedIntent.purpose,
+    ...(storedIntent.category !== null && {
+      category: storedIntent.category,
+    }),
+    recurringAllowed: storedIntent.recurringAllowed,
+    maxTransactions: storedIntent.maxTransactions,
+
+    // Transaction usage will be derived from persisted
+    // PaymentIntents in a later step.
+    transactionsUsed: 0,
+
+    expiresAt: storedIntent.expiresAt,
+  };
+
+  const result = evaluatePayment(
+    payment,
+    agent,
+    authoritativeIntent
+  );
 
   const paymentIntent = await prisma.paymentIntent.create({
     data: {
