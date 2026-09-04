@@ -6640,3 +6640,57 @@ textarea:focus {
   background: #fff7ed !important;
   color: #c66a00 !important;
 }
+.security-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: -5px 0 24px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.security-stage {
+  flex: 1;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fafbfc;
+}
+
+.security-stage span,
+.security-stage strong {
+  display: block;
+}
+
+.security-stage span {
+  color: #98a2b3;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .7px;
+}
+
+.security-stage strong {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.security-stage.highlighted {
+  background: var(--blue-soft);
+  border-color: #cbdcff;
+}
+
+.security-stage.highlighted span {
+  color: var(--blue);
+}
+
+.security-stage.highlighted strong {
+  color: var(--blue);
+}
+
+.security-arrow {
+  color: #aeb7c5;
+  font-size: 18px;
+  flex-shrink: 0;
+}

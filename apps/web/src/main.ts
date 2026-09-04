@@ -175,14 +175,40 @@ async function loadDashboard() {
 
   renderContent(`
     <div class="page-intro">
-      <div>
-        <h2>AI Payment Security</h2>
-        <p>Monitor autonomous payments, risk decisions and security events.</p>
-      </div>
-      <button class="primary-button" data-page-action="battlebox">
-        Run security test
-      </button>
-    </div>
+  <div>
+    <div class="eyebrow">INTENT-AWARE PAYMENT SECURITY</div>
+    <h2>Security for autonomous payments</h2>
+    <p>
+      Vanguard evaluates every agent payment against user intent,
+      policy, risk and behavior before execution.
+    </p>
+  </div>
+
+  <button class="primary-button" data-page-action="battlebox">
+    Test an attack
+  </button>
+</div>
+
+<div class="security-banner">
+  <div class="security-stage">
+    <span>01</span>
+    <strong>Agent Request</strong>
+  </div>
+
+  <div class="security-arrow">→</div>
+
+  <div class="security-stage highlighted">
+    <span>02</span>
+    <strong>Vanguard Authorization</strong>
+  </div>
+
+  <div class="security-arrow">→</div>
+
+  <div class="security-stage">
+    <span>03</span>
+    <strong>Payment Rail</strong>
+  </div>
+</div>
 
     <div class="stat-grid">
       <div class="stat-card">
